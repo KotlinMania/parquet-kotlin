@@ -9,7 +9,7 @@ package io.github.kotlinmania.parquet
  * For example INT16 is not included as a type since a good encoding of INT32
  * would handle this.
  */
-public enum class Type(public val value: Int) {
+public enum class ParquetType(public val value: Int) {
     BOOLEAN(0),
     INT32(1),
     INT64(2),
@@ -20,7 +20,7 @@ public enum class Type(public val value: Int) {
     FIXED_LEN_BYTE_ARRAY(7);
 
     public companion object {
-        public fun fromInt(value: Int): Type = when (value) {
+        public fun fromInt(value: Int): ParquetType = when (value) {
             0 -> BOOLEAN
             1 -> INT32
             2 -> INT64
@@ -32,7 +32,7 @@ public enum class Type(public val value: Int) {
             else -> throw generalErr("Invalid parquet type value: $value")
         }
 
-        public fun fromString(s: String): Type = when (s) {
+        public fun fromString(s: String): ParquetType = when (s) {
             "BOOLEAN" -> BOOLEAN
             "INT32" -> INT32
             "INT64" -> INT64
@@ -223,7 +223,7 @@ public data class GeographyType(
     public val crs: String?,
     public val algorithm: EdgeInterpolationAlgorithm? = null,
 ) {
-    public fun algorithm(): EdgeInterpolationAlgorithm =
+    public fun effectiveAlgorithm(): EdgeInterpolationAlgorithm =
         algorithm ?: EdgeInterpolationAlgorithm.SPHERICAL
 }
 
@@ -793,11 +793,11 @@ public sealed class ColumnOrder {
         public fun columnOrderForType(
             logicalType: LogicalType?,
             convertedType: ConvertedType,
-            physicalType: Type,
+            physicalType: ParquetType,
         ): ColumnOrder {
-            return if (logicalType is LogicalType.Float16 || physicalType == Type.FLOAT || physicalType == Type.DOUBLE) {
+            return if (logicalType is LogicalType.Float16 || physicalType == ParquetType.FLOAT || physicalType == ParquetType.DOUBLE) {
                 Ieee754TotalOrder
-            } else if (physicalType == Type.INT96) {
+            } else if (physicalType == ParquetType.INT96) {
                 Int96TimestampOrder
             } else {
                 val sortOrder = getSortOrderForType(logicalType, convertedType, physicalType, true)
@@ -808,7 +808,7 @@ public sealed class ColumnOrder {
         public fun getSortOrderForType(
             logicalType: LogicalType?,
             convertedType: ConvertedType,
-            physicalType: Type,
+            physicalType: ParquetType,
             isTypeDefined: Boolean,
         ): SortOrder {
             return if (logicalType != null) {
@@ -839,7 +839,7 @@ public sealed class ColumnOrder {
 
         public fun getConvertedSortOrder(
             convertedType: ConvertedType,
-            physicalType: Type,
+            physicalType: ParquetType,
             isTypeDefined: Boolean,
         ): SortOrder {
             return when (convertedType) {
@@ -876,13 +876,13 @@ public sealed class ColumnOrder {
             }
         }
 
-        public fun getDefaultSortOrder(physicalType: Type, isTypeDefined: Boolean): SortOrder {
+        public fun getDefaultSortOrder(physicalType: ParquetType, isTypeDefined: Boolean): SortOrder {
             return when (physicalType) {
-                Type.BOOLEAN -> SortOrder.UNSIGNED
-                Type.INT32, Type.INT64 -> SortOrder.SIGNED
-                Type.INT96 -> if (isTypeDefined) SortOrder.UNDEFINED else SortOrder.INT96_TIMESTAMP
-                Type.FLOAT, Type.DOUBLE -> if (isTypeDefined) SortOrder.SIGNED else SortOrder.TOTAL_ORDER
-                Type.BYTE_ARRAY, Type.FIXED_LEN_BYTE_ARRAY -> SortOrder.UNSIGNED
+                ParquetType.BOOLEAN -> SortOrder.UNSIGNED
+                ParquetType.INT32, ParquetType.INT64 -> SortOrder.SIGNED
+                ParquetType.INT96 -> if (isTypeDefined) SortOrder.UNDEFINED else SortOrder.INT96_TIMESTAMP
+                ParquetType.FLOAT, ParquetType.DOUBLE -> if (isTypeDefined) SortOrder.SIGNED else SortOrder.TOTAL_ORDER
+                ParquetType.BYTE_ARRAY, ParquetType.FIXED_LEN_BYTE_ARRAY -> SortOrder.UNSIGNED
             }
         }
     }
