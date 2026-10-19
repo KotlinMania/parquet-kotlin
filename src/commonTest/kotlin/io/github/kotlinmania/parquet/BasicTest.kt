@@ -36,6 +36,100 @@ class BasicTest {
         )
     }
 
+    private fun <T : WriteThrift> testRoundtrip(value: T, reader: ReadThrift<T>) {
+        val out = ThriftCompactOutputProtocol()
+        value.writeThrift(out)
+        val bytes = out.toByteArray()
+        val prot = ThriftSliceInputProtocol(bytes)
+        val readVal = reader.readThrift(prot)
+        assertEquals(value, readVal)
+    }
+
+    @Test
+    fun testConvertedTypeRoundtrip() {
+        testRoundtrip(ConvertedType.UTF8, ConvertedType)
+        testRoundtrip(ConvertedType.MAP, ConvertedType)
+        testRoundtrip(ConvertedType.MAP_KEY_VALUE, ConvertedType)
+        testRoundtrip(ConvertedType.LIST, ConvertedType)
+        testRoundtrip(ConvertedType.ENUM, ConvertedType)
+        testRoundtrip(ConvertedType.DECIMAL, ConvertedType)
+        testRoundtrip(ConvertedType.DATE, ConvertedType)
+        testRoundtrip(ConvertedType.TIME_MILLIS, ConvertedType)
+        testRoundtrip(ConvertedType.TIME_MICROS, ConvertedType)
+        testRoundtrip(ConvertedType.TIMESTAMP_MILLIS, ConvertedType)
+        testRoundtrip(ConvertedType.TIMESTAMP_MICROS, ConvertedType)
+        testRoundtrip(ConvertedType.UINT_8, ConvertedType)
+        testRoundtrip(ConvertedType.UINT_16, ConvertedType)
+        testRoundtrip(ConvertedType.UINT_32, ConvertedType)
+        testRoundtrip(ConvertedType.UINT_64, ConvertedType)
+        testRoundtrip(ConvertedType.INT_8, ConvertedType)
+        testRoundtrip(ConvertedType.INT_16, ConvertedType)
+        testRoundtrip(ConvertedType.INT_32, ConvertedType)
+        testRoundtrip(ConvertedType.INT_64, ConvertedType)
+        testRoundtrip(ConvertedType.JSON, ConvertedType)
+        testRoundtrip(ConvertedType.BSON, ConvertedType)
+        testRoundtrip(ConvertedType.INTERVAL, ConvertedType)
+    }
+
+    @Test
+    fun testReadInvalidConvertedType() {
+        val prot = ThriftSliceInputProtocol(byteArrayOf(0x7E.toByte()))
+        val err =
+            assertFailsWith<ParquetError> {
+                ConvertedType.readThrift(prot)
+            }
+        assertEquals("Parquet error: Unexpected ConvertedType 63", err.message)
+    }
+
+    @Test
+    fun testLogicalTypeRoundtrip() {
+        testRoundtrip(LogicalType.String, LogicalType)
+        testRoundtrip(LogicalType.Map, LogicalType)
+        testRoundtrip(LogicalType.List, LogicalType)
+        testRoundtrip(LogicalType.Enum, LogicalType)
+        testRoundtrip(LogicalType.decimal(0, 20), LogicalType)
+        testRoundtrip(LogicalType.Date, LogicalType)
+        testRoundtrip(LogicalType.time(true, TimeUnit.MICROS), LogicalType)
+        testRoundtrip(LogicalType.time(false, TimeUnit.MILLIS), LogicalType)
+        testRoundtrip(LogicalType.time(false, TimeUnit.NANOS), LogicalType)
+        testRoundtrip(LogicalType.timestamp(false, TimeUnit.MICROS), LogicalType)
+        testRoundtrip(LogicalType.timestamp(true, TimeUnit.MILLIS), LogicalType)
+        testRoundtrip(LogicalType.timestamp(true, TimeUnit.NANOS), LogicalType)
+        testRoundtrip(LogicalType.integer(8, true), LogicalType)
+        testRoundtrip(LogicalType.integer(16, false), LogicalType)
+        testRoundtrip(LogicalType.integer(32, true), LogicalType)
+        testRoundtrip(LogicalType.integer(64, false), LogicalType)
+        testRoundtrip(LogicalType.Json, LogicalType)
+        testRoundtrip(LogicalType.Bson, LogicalType)
+        testRoundtrip(LogicalType.Uuid, LogicalType)
+        testRoundtrip(LogicalType.Float16, LogicalType)
+        testRoundtrip(LogicalType.variant(1.toByte()), LogicalType)
+        testRoundtrip(LogicalType.variant(null), LogicalType)
+        testRoundtrip(LogicalType.geometry("foo"), LogicalType)
+        testRoundtrip(LogicalType.geometry(null), LogicalType)
+        testRoundtrip(
+            LogicalType.geography("foo", EdgeInterpolationAlgorithm.ANDOYER),
+            LogicalType,
+        )
+        testRoundtrip(
+            LogicalType.geography(null, EdgeInterpolationAlgorithm.KARNEY),
+            LogicalType,
+        )
+        testRoundtrip(
+            LogicalType.geography("foo", EdgeInterpolationAlgorithm.SPHERICAL),
+            LogicalType,
+        )
+        testRoundtrip(
+            LogicalType.geography(null, EdgeInterpolationAlgorithm.SPHERICAL),
+            LogicalType,
+        )
+    }
+
+    @Test
+    fun testColumnOrderRoundtrip() {
+        testRoundtrip(ColumnOrder.TypeDefinedOrder(SortOrder.SIGNED), ColumnOrder)
+    }
+
     @Test
     fun testDisplayConvertedType() {
         assertEquals("NONE", ConvertedType.NONE.toString())

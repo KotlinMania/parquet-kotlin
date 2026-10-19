@@ -11,7 +11,8 @@ package io.github.kotlinmania.parquet
  */
 public enum class ParquetType(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     BOOLEAN(0),
     INT32(1),
     INT64(2),
@@ -22,7 +23,28 @@ public enum class ParquetType(
     FIXED_LEN_BYTE_ARRAY(7),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<ParquetType> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): ParquetType {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): ParquetType =
             when (value) {
                 0 -> BOOLEAN
@@ -59,7 +81,8 @@ public enum class ParquetType(
  */
 public enum class ConvertedType(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     NONE(-1),
     UTF8(0),
     MAP(1),
@@ -85,7 +108,30 @@ public enum class ConvertedType(
     INTERVAL(21),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        if (this == NONE) throw generalErr("ConvertedType.NONE cannot be written to thrift")
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<ConvertedType> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): ConvertedType {
+            val v = prot.readI32()
+            if (v !in 0..21) throw generalErr("Unexpected ConvertedType $v")
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): ConvertedType =
             when (value) {
                 -1 -> NONE
@@ -239,13 +285,68 @@ public enum class ConvertedType(
  */
 public enum class TimeUnit(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     MILLIS(1),
     MICROS(2),
     NANOS(3),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.STRUCT
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        when (this) {
+            MILLIS -> writer.writeEmptyStruct(1, 0)
+            MICROS -> writer.writeEmptyStruct(2, 0)
+            NANOS -> writer.writeEmptyStruct(3, 0)
+        }
+        writer.writeStructEnd()
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.STRUCT, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<TimeUnit> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): TimeUnit {
+            val fieldIdent = prot.readFieldBegin(0)
+            if (fieldIdent.fieldType == FieldType.STOP) {
+                throw generalErr("Received empty union from remote TimeUnit")
+            }
+            val ret =
+                when (fieldIdent.id.toInt()) {
+                    1 -> {
+                        prot.skipEmptyStruct()
+                        MILLIS
+                    }
+
+                    2 -> {
+                        prot.skipEmptyStruct()
+                        MICROS
+                    }
+
+                    3 -> {
+                        prot.skipEmptyStruct()
+                        NANOS
+                    }
+
+                    else -> {
+                        throw generalErr("Unexpected TimeUnit ${fieldIdent.id}")
+                    }
+                }
+            val stop = prot.readFieldBegin(fieldIdent.id)
+            if (stop.fieldType != FieldType.STOP) {
+                throw generalErr("Received multiple fields for union from remote TimeUnit")
+            }
+            return ret
+        }
+
         public fun fromInt(value: Int): TimeUnit =
             when (value) {
                 1 -> MILLIS
@@ -292,7 +393,133 @@ public data class GeographyType(
 /**
  * Logical types used by version 2.4.0+ of the Parquet format.
  */
-public sealed class LogicalType {
+public sealed class LogicalType :
+    WriteThrift,
+    WriteThriftField {
+    override val elementType: ElementType get() = ElementType.STRUCT
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        when (this) {
+            is String -> {
+                writer.writeEmptyStruct(1, 0)
+            }
+
+            is Map -> {
+                writer.writeEmptyStruct(2, 0)
+            }
+
+            is List -> {
+                writer.writeEmptyStruct(3, 0)
+            }
+
+            is Enum -> {
+                writer.writeEmptyStruct(4, 0)
+            }
+
+            is Decimal -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 5, 0)
+                writer.writeFieldBegin(FieldType.I32, 1, 0)
+                writer.writeI32(scale)
+                writer.writeFieldBegin(FieldType.I32, 2, 1)
+                writer.writeI32(precision)
+                writer.writeStructEnd()
+            }
+
+            is Date -> {
+                writer.writeEmptyStruct(6, 0)
+            }
+
+            is Time -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 7, 0)
+                writer.writeFieldBegin(if (isAdjustedToUTC) FieldType.BOOLEAN_TRUE else FieldType.BOOLEAN_FALSE, 1, 0)
+                unit.writeThriftField(writer, 2, 1)
+                writer.writeStructEnd()
+            }
+
+            is Timestamp -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 8, 0)
+                writer.writeFieldBegin(if (isAdjustedToUTC) FieldType.BOOLEAN_TRUE else FieldType.BOOLEAN_FALSE, 1, 0)
+                unit.writeThriftField(writer, 2, 1)
+                writer.writeStructEnd()
+            }
+
+            is Integer -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 10, 0)
+                writer.writeFieldBegin(FieldType.BYTE, 1, 0)
+                writer.writeI8(bitWidth)
+                writer.writeFieldBegin(if (isSigned) FieldType.BOOLEAN_TRUE else FieldType.BOOLEAN_FALSE, 2, 1)
+                writer.writeStructEnd()
+            }
+
+            is Unknown -> {
+                writer.writeEmptyStruct(11, 0)
+            }
+
+            is Json -> {
+                writer.writeEmptyStruct(12, 0)
+            }
+
+            is Bson -> {
+                writer.writeEmptyStruct(13, 0)
+            }
+
+            is Uuid -> {
+                writer.writeEmptyStruct(14, 0)
+            }
+
+            is Float16 -> {
+                writer.writeEmptyStruct(15, 0)
+            }
+
+            is Variant -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 16, 0)
+                if (specificationVersion != null) {
+                    writer.writeFieldBegin(FieldType.BYTE, 1, 0)
+                    writer.writeI8(specificationVersion)
+                }
+                writer.writeStructEnd()
+            }
+
+            is Geometry -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 17, 0)
+                if (crs != null) {
+                    writer.writeFieldBegin(FieldType.BINARY, 1, 0)
+                    writer.writeBytes(crs.encodeToByteArray())
+                }
+                writer.writeStructEnd()
+            }
+
+            is Geography -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 18, 0)
+                var lastId: Short = 0
+                if (crs != null) {
+                    writer.writeFieldBegin(FieldType.BINARY, 1, 0)
+                    writer.writeBytes(crs.encodeToByteArray())
+                    lastId = 1
+                }
+                if (algorithm != null) {
+                    algorithm.writeThriftField(writer, 2, lastId)
+                }
+                writer.writeStructEnd()
+            }
+
+            is File -> {
+                writer.writeEmptyStruct(19, 0)
+            }
+        }
+        writer.writeStructEnd()
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.STRUCT, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
     public data object String : LogicalType() {
         override fun toString(): kotlin.String = "STRING"
     }
@@ -378,7 +605,196 @@ public sealed class LogicalType {
         override fun toString(): kotlin.String = "FILE"
     }
 
-    public companion object {
+    public companion object : ReadThrift<LogicalType> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): LogicalType {
+            val fieldIdent = prot.readFieldBegin(0)
+            if (fieldIdent.fieldType == FieldType.STOP) {
+                throw generalErr("Received empty union from remote LogicalType")
+            }
+            val ret =
+                when (fieldIdent.id.toInt()) {
+                    1 -> {
+                        prot.skipEmptyStruct()
+                        String
+                    }
+
+                    2 -> {
+                        prot.skipEmptyStruct()
+                        Map
+                    }
+
+                    3 -> {
+                        prot.skipEmptyStruct()
+                        List
+                    }
+
+                    4 -> {
+                        prot.skipEmptyStruct()
+                        Enum
+                    }
+
+                    5 -> {
+                        var scale = 0
+                        var precision = 0
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> scale = prot.readI32()
+                                2 -> precision = prot.readI32()
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Decimal(scale, precision)
+                    }
+
+                    6 -> {
+                        prot.skipEmptyStruct()
+                        Date
+                    }
+
+                    7 -> {
+                        var isAdjusted = false
+                        var unit = TimeUnit.MILLIS
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> isAdjusted = f.boolVal()
+                                2 -> unit = TimeUnit.readThrift(prot)
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Time(isAdjusted, unit)
+                    }
+
+                    8 -> {
+                        var isAdjusted = false
+                        var unit = TimeUnit.MILLIS
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> isAdjusted = f.boolVal()
+                                2 -> unit = TimeUnit.readThrift(prot)
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Timestamp(isAdjusted, unit)
+                    }
+
+                    10 -> {
+                        var bitWidth: Byte = 0
+                        var isSigned = false
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> bitWidth = prot.readI8()
+                                2 -> isSigned = f.boolVal()
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Integer(bitWidth, isSigned)
+                    }
+
+                    11 -> {
+                        prot.skipEmptyStruct()
+                        Unknown
+                    }
+
+                    12 -> {
+                        prot.skipEmptyStruct()
+                        Json
+                    }
+
+                    13 -> {
+                        prot.skipEmptyStruct()
+                        Bson
+                    }
+
+                    14 -> {
+                        prot.skipEmptyStruct()
+                        Uuid
+                    }
+
+                    15 -> {
+                        prot.skipEmptyStruct()
+                        Float16
+                    }
+
+                    16 -> {
+                        var version: Byte? = null
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> version = prot.readI8()
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Variant(version)
+                    }
+
+                    17 -> {
+                        var crs: kotlin.String? = null
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> crs = prot.readString()
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Geometry(crs)
+                    }
+
+                    18 -> {
+                        var crs: kotlin.String? = null
+                        var algo: EdgeInterpolationAlgorithm? = null
+                        var lastId: Short = 0
+                        while (true) {
+                            val f = prot.readFieldBegin(lastId)
+                            if (f.fieldType == FieldType.STOP) break
+                            lastId = f.id
+                            when (f.id.toInt()) {
+                                1 -> crs = prot.readString()
+                                2 -> algo = EdgeInterpolationAlgorithm.readThrift(prot)
+                                else -> prot.skip(f.fieldType)
+                            }
+                        }
+                        Geography(crs, algo)
+                    }
+
+                    19 -> {
+                        prot.skipEmptyStruct()
+                        File
+                    }
+
+                    else -> {
+                        prot.skip(fieldIdent.fieldType)
+                        Unknown
+                    }
+                }
+            val stop = prot.readFieldBegin(fieldIdent.id)
+            if (stop.fieldType != FieldType.STOP) {
+                throw generalErr("Received multiple fields for union from remote LogicalType")
+            }
+            return ret
+        }
+
         public fun integer(bitWidth: Byte, isSigned: Boolean): LogicalType =
             Integer(bitWidth, isSigned)
 
@@ -431,13 +847,35 @@ public sealed class LogicalType {
  */
 public enum class FieldRepetitionType(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     REQUIRED(0),
     OPTIONAL(1),
     REPEATED(2),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<FieldRepetitionType> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): FieldRepetitionType {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): FieldRepetitionType =
             when (value) {
                 0 -> REQUIRED
@@ -463,7 +901,8 @@ public typealias Repetition = FieldRepetitionType
  */
 public enum class Encoding(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     PLAIN(0),
     PLAIN_DICTIONARY(2),
     RLE(3),
@@ -476,7 +915,28 @@ public enum class Encoding(
     ALP(10),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<Encoding> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): Encoding {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public const val MAX_DISCRIMINANT: Int = 10
 
         public fun fromInt(value: Int): Encoding =
@@ -516,7 +976,17 @@ public enum class Encoding(
  */
 public data class EncodingMask(
     public var mask: Int = 0,
-) {
+) : WriteThrift {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        val encs = encodings()
+        writer.writeListBegin(ElementType.I32, encs.size)
+        for (enc in encs) {
+            enc.writeThrift(writer)
+        }
+    }
+
     public fun asInt(): Int = mask
 
     public fun insert(valEncoding: Encoding) {
@@ -537,7 +1007,18 @@ public data class EncodingMask(
             .filter { (mask and (1 shl it)) != 0 }
             .map { Encoding.fromInt(it) }
 
-    public companion object {
+    public companion object : ReadThrift<EncodingMask> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): EncodingMask {
+            val listIdent = prot.readListBegin()
+            validateListType(ElementType.I32, listIdent)
+            var m = 0
+            for (i in 0 until listIdent.size) {
+                val enc = Encoding.readThrift(prot)
+                m = m or (1 shl enc.value)
+            }
+            return EncodingMask(m)
+        }
+
         private const val MAX_ENCODING: Int = Encoding.MAX_DISCRIMINANT
         private const val ALLOWED_MASK: Long =
             ((1L shl (MAX_ENCODING + 1)) - 1L) and (1L shl 1).inv()
@@ -566,7 +1047,8 @@ public data class EncodingMask(
  */
 public enum class CompressionCodec(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     UNCOMPRESSED(0),
     SNAPPY(1),
     GZIP(2),
@@ -577,7 +1059,28 @@ public enum class CompressionCodec(
     LZ4_RAW(7),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<CompressionCodec> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): CompressionCodec {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): CompressionCodec =
             when (value) {
                 0 -> UNCOMPRESSED
@@ -782,14 +1285,36 @@ public sealed class Compression {
  */
 public enum class PageType(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     DATA_PAGE(0),
     INDEX_PAGE(1),
     DICTIONARY_PAGE(2),
     DATA_PAGE_V2(3),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<PageType> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): PageType {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): PageType =
             when (value) {
                 0 -> DATA_PAGE
@@ -807,13 +1332,35 @@ public enum class PageType(
  */
 public enum class BoundaryOrder(
     public val value: Int,
-) {
+) : WriteThrift,
+    WriteThriftField {
     UNORDERED(0),
     ASCENDING(1),
     DESCENDING(2),
     ;
 
-    public companion object {
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
+    public companion object : ReadThrift<BoundaryOrder> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): BoundaryOrder {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): BoundaryOrder =
             when (value) {
                 0 -> UNORDERED
@@ -827,8 +1374,26 @@ public enum class BoundaryOrder(
 /**
  * Edge interpolation algorithm for LogicalType::Geography
  */
-public sealed class EdgeInterpolationAlgorithm {
+public sealed class EdgeInterpolationAlgorithm :
+    WriteThrift,
+    WriteThriftField {
     public abstract val value: Int
+
+    override val elementType: ElementType get() = ElementType.I32
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        writer.writeI32(value)
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.I32, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
 
     public data object SPHERICAL : EdgeInterpolationAlgorithm() {
         override val value: Int = 0
@@ -868,7 +1433,12 @@ public sealed class EdgeInterpolationAlgorithm {
         override fun toString(): String = "_Unknown($id)"
     }
 
-    public companion object {
+    public companion object : ReadThrift<EdgeInterpolationAlgorithm> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): EdgeInterpolationAlgorithm {
+            val v = prot.readI32()
+            return fromInt(v)
+        }
+
         public fun fromInt(value: Int): EdgeInterpolationAlgorithm =
             when (value) {
                 0 -> SPHERICAL
@@ -909,7 +1479,45 @@ public enum class SortOrder {
 /**
  * Column order that specifies what method was used to aggregate min/max values for statistics.
  */
-public sealed class ColumnOrder {
+public sealed class ColumnOrder :
+    WriteThrift,
+    WriteThriftField {
+    override val elementType: ElementType get() = ElementType.STRUCT
+
+    override fun writeThrift(writer: ThriftCompactOutputProtocol) {
+        when (this) {
+            is TypeDefinedOrder -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 1, 0)
+                writer.writeStructEnd()
+            }
+
+            is Ieee754TotalOrder -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 2, 0)
+                writer.writeStructEnd()
+            }
+
+            is Int96TimestampOrder -> {
+                writer.writeFieldBegin(FieldType.STRUCT, 3, 0)
+                writer.writeStructEnd()
+            }
+
+            else -> {
+                throw generalErr("Attempt to write undefined ColumnOrder")
+            }
+        }
+        writer.writeStructEnd()
+    }
+
+    override fun writeThriftField(
+        writer: ThriftCompactOutputProtocol,
+        fieldId: Short,
+        lastFieldId: Short,
+    ): Short {
+        writer.writeFieldBegin(FieldType.STRUCT, fieldId, lastFieldId)
+        writeThrift(writer)
+        return fieldId
+    }
+
     public data class TypeDefinedOrder(
         public val sortOrder: SortOrder,
     ) : ColumnOrder() {
@@ -941,7 +1549,41 @@ public sealed class ColumnOrder {
             is Unknown -> SortOrder.UNDEFINED
         }
 
-    public companion object {
+    public companion object : ReadThrift<ColumnOrder> {
+        override fun readThrift(prot: ThriftCompactInputProtocol): ColumnOrder {
+            val fieldIdent = prot.readFieldBegin(0)
+            if (fieldIdent.fieldType == FieldType.STOP) {
+                throw generalErr("Received empty union from remote ColumnOrder")
+            }
+            val ret =
+                when (fieldIdent.id.toInt()) {
+                    1 -> {
+                        prot.skipEmptyStruct()
+                        TypeDefinedOrder(SortOrder.SIGNED)
+                    }
+
+                    2 -> {
+                        prot.skipEmptyStruct()
+                        Ieee754TotalOrder
+                    }
+
+                    3 -> {
+                        prot.skipEmptyStruct()
+                        Int96TimestampOrder
+                    }
+
+                    else -> {
+                        prot.skip(fieldIdent.fieldType)
+                        Unknown
+                    }
+                }
+            val stop = prot.readFieldBegin(fieldIdent.id)
+            if (stop.fieldType != FieldType.STOP) {
+                throw generalErr("Received multiple fields for union from remote ColumnOrder")
+            }
+            return ret
+        }
+
         public fun columnOrderForType(
             logicalType: LogicalType?,
             convertedType: ConvertedType,
