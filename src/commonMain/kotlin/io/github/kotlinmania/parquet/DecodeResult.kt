@@ -10,12 +10,16 @@ public sealed class DecodeResult<out T> {
     /**
      * The ranges of data necessary to proceed.
      */
-    public data class NeedsData(public val ranges: List<LongRange>) : DecodeResult<Nothing>()
+    public data class NeedsData(
+        public val ranges: List<LongRange>,
+    ) : DecodeResult<Nothing>()
 
     /**
      * The decoder produced an output item.
      */
-    public data class Data<T>(public val value: T) : DecodeResult<T>()
+    public data class Data<T>(
+        public val value: T,
+    ) : DecodeResult<T>()
 
     /**
      * The decoder finished processing.

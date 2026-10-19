@@ -293,45 +293,48 @@ class BasicTest {
             }
         }
 
-        val unsigned = listOf(
-            LogicalType.String,
-            LogicalType.Json,
-            LogicalType.Bson,
-            LogicalType.Enum,
-            LogicalType.Uuid,
-            LogicalType.integer(8, false),
-            LogicalType.integer(16, false),
-            LogicalType.integer(32, false),
-            LogicalType.integer(64, false),
-        )
+        val unsigned =
+            listOf(
+                LogicalType.String,
+                LogicalType.Json,
+                LogicalType.Bson,
+                LogicalType.Enum,
+                LogicalType.Uuid,
+                LogicalType.integer(8, false),
+                LogicalType.integer(16, false),
+                LogicalType.integer(32, false),
+                LogicalType.integer(64, false),
+            )
         checkSortOrder(unsigned, SortOrder.UNSIGNED)
 
-        val signed = listOf(
-            LogicalType.integer(8, true),
-            LogicalType.integer(16, true),
-            LogicalType.integer(32, true),
-            LogicalType.integer(64, true),
-            LogicalType.decimal(20, 4),
-            LogicalType.Date,
-            LogicalType.time(false, TimeUnit.MILLIS),
-            LogicalType.time(false, TimeUnit.MICROS),
-            LogicalType.time(true, TimeUnit.NANOS),
-            LogicalType.timestamp(false, TimeUnit.MILLIS),
-            LogicalType.timestamp(false, TimeUnit.MICROS),
-            LogicalType.timestamp(true, TimeUnit.NANOS),
-        )
+        val signed =
+            listOf(
+                LogicalType.integer(8, true),
+                LogicalType.integer(16, true),
+                LogicalType.integer(32, true),
+                LogicalType.integer(64, true),
+                LogicalType.decimal(20, 4),
+                LogicalType.Date,
+                LogicalType.time(false, TimeUnit.MILLIS),
+                LogicalType.time(false, TimeUnit.MICROS),
+                LogicalType.time(true, TimeUnit.NANOS),
+                LogicalType.timestamp(false, TimeUnit.MILLIS),
+                LogicalType.timestamp(false, TimeUnit.MICROS),
+                LogicalType.timestamp(true, TimeUnit.NANOS),
+            )
         checkSortOrder(signed, SortOrder.SIGNED)
 
         val float = listOf(LogicalType.Float16)
         checkSortOrder(float, SortOrder.TOTAL_ORDER)
 
-        val undefined = listOf(
-            LogicalType.List,
-            LogicalType.Map,
-            LogicalType.variant(null),
-            LogicalType.geometry(null),
-            LogicalType.geography(null, EdgeInterpolationAlgorithm.SPHERICAL),
-        )
+        val undefined =
+            listOf(
+                LogicalType.List,
+                LogicalType.Map,
+                LogicalType.variant(null),
+                LogicalType.geometry(null),
+                LogicalType.geography(null, EdgeInterpolationAlgorithm.SPHERICAL),
+            )
         checkSortOrder(undefined, SortOrder.UNDEFINED)
     }
 
@@ -346,38 +349,41 @@ class BasicTest {
             }
         }
 
-        val unsigned = listOf(
-            ConvertedType.UTF8,
-            ConvertedType.JSON,
-            ConvertedType.BSON,
-            ConvertedType.ENUM,
-            ConvertedType.UINT_8,
-            ConvertedType.UINT_16,
-            ConvertedType.UINT_32,
-            ConvertedType.UINT_64,
-        )
+        val unsigned =
+            listOf(
+                ConvertedType.UTF8,
+                ConvertedType.JSON,
+                ConvertedType.BSON,
+                ConvertedType.ENUM,
+                ConvertedType.UINT_8,
+                ConvertedType.UINT_16,
+                ConvertedType.UINT_32,
+                ConvertedType.UINT_64,
+            )
         checkSortOrder(unsigned, SortOrder.UNSIGNED)
 
-        val signed = listOf(
-            ConvertedType.INT_8,
-            ConvertedType.INT_16,
-            ConvertedType.INT_32,
-            ConvertedType.INT_64,
-            ConvertedType.DECIMAL,
-            ConvertedType.DATE,
-            ConvertedType.TIME_MILLIS,
-            ConvertedType.TIME_MICROS,
-            ConvertedType.TIMESTAMP_MILLIS,
-            ConvertedType.TIMESTAMP_MICROS,
-        )
+        val signed =
+            listOf(
+                ConvertedType.INT_8,
+                ConvertedType.INT_16,
+                ConvertedType.INT_32,
+                ConvertedType.INT_64,
+                ConvertedType.DECIMAL,
+                ConvertedType.DATE,
+                ConvertedType.TIME_MILLIS,
+                ConvertedType.TIME_MICROS,
+                ConvertedType.TIMESTAMP_MILLIS,
+                ConvertedType.TIMESTAMP_MICROS,
+            )
         checkSortOrder(signed, SortOrder.SIGNED)
 
-        val undefined = listOf(
-            ConvertedType.LIST,
-            ConvertedType.MAP,
-            ConvertedType.MAP_KEY_VALUE,
-            ConvertedType.INTERVAL,
-        )
+        val undefined =
+            listOf(
+                ConvertedType.LIST,
+                ConvertedType.MAP,
+                ConvertedType.MAP_KEY_VALUE,
+                ConvertedType.INTERVAL,
+            )
         checkSortOrder(undefined, SortOrder.UNDEFINED)
 
         checkSortOrder(listOf(ConvertedType.NONE), SortOrder.UNSIGNED)
@@ -422,9 +428,10 @@ class BasicTest {
         assertEquals(Encoding.ALP, Encoding.fromString("alp"))
         assertEquals(Encoding.BYTE_STREAM_SPLIT, Encoding.fromString("byte_stream_split"))
 
-        val ex = assertFailsWith<ParquetError.General> {
-            Encoding.fromString("plain_xxx")
-        }
+        val ex =
+            assertFailsWith<ParquetError.General> {
+                Encoding.fromString("plain_xxx")
+            }
         assertEquals("Parquet error: unknown encoding: plain_xxx", ex.message)
     }
 
@@ -442,14 +449,16 @@ class BasicTest {
         assertEquals(Compression.BROTLI(BrotliLevel.tryNew(3).getOrThrow()), Compression.fromString("brotli(3)"))
         assertEquals(Compression.LZ4, Compression.fromString("lz4"))
 
-        val err1 = assertFailsWith<ParquetError.General> {
-            Encoding.fromString("plain_xxx")
-        }
+        val err1 =
+            assertFailsWith<ParquetError.General> {
+                Encoding.fromString("plain_xxx")
+            }
         assertEquals("Parquet error: unknown encoding: plain_xxx", err1.message)
 
-        val err2 = assertFailsWith<ParquetError.General> {
-            Encoding.fromString("gzip(-10)")
-        }
+        val err2 =
+            assertFailsWith<ParquetError.General> {
+                Encoding.fromString("gzip(-10)")
+            }
         assertEquals("Parquet error: unknown encoding: gzip(-10)", err2.message)
     }
 
@@ -494,18 +503,19 @@ class BasicTest {
         encodingsRoundtrip(listOf(Encoding.RLE, Encoding.PLAIN, Encoding.DELTA_BINARY_PACKED))
         encodingsRoundtrip(listOf(Encoding.RLE_DICTIONARY, Encoding.PLAIN_DICTIONARY))
         encodingsRoundtrip(emptyList())
-        val encodings = listOf(
-            Encoding.PLAIN,
-            Encoding.BIT_PACKED,
-            Encoding.RLE,
-            Encoding.DELTA_BINARY_PACKED,
-            Encoding.DELTA_BYTE_ARRAY,
-            Encoding.DELTA_LENGTH_BYTE_ARRAY,
-            Encoding.PLAIN_DICTIONARY,
-            Encoding.RLE_DICTIONARY,
-            Encoding.BYTE_STREAM_SPLIT,
-            Encoding.ALP,
-        )
+        val encodings =
+            listOf(
+                Encoding.PLAIN,
+                Encoding.BIT_PACKED,
+                Encoding.RLE,
+                Encoding.DELTA_BINARY_PACKED,
+                Encoding.DELTA_BYTE_ARRAY,
+                Encoding.DELTA_LENGTH_BYTE_ARRAY,
+                Encoding.PLAIN_DICTIONARY,
+                Encoding.RLE_DICTIONARY,
+                Encoding.BYTE_STREAM_SPLIT,
+                Encoding.ALP,
+            )
         encodingsRoundtrip(encodings)
     }
 

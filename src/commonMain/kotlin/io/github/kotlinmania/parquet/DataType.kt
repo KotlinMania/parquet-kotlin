@@ -9,7 +9,8 @@ import io.github.kotlinmania.bytes.Bytes
  */
 public data class Int96(
     private val value: UIntArray = UIntArray(3),
-) : Comparable<Int96>, AsBytes {
+) : Comparable<Int96>,
+    AsBytes {
     public constructor() : this(UIntArray(3))
 
     public fun data(): UIntArray = value
@@ -97,7 +98,10 @@ public data class Int96(
     }
 }
 
-internal data class DaysAndNanos(val days: Int, val nanos: Long)
+internal data class DaysAndNanos(
+    val days: Int,
+    val nanos: Long,
+)
 
 /**
  * Representation for BYTE_ARRAY and FIXED_LEN_BYTE_ARRAY Parquet physical types.
@@ -105,7 +109,8 @@ internal data class DaysAndNanos(val days: Int, val nanos: Long)
  */
 public class ByteArray(
     public var rawData: Bytes? = null,
-) : Comparable<ByteArray>, AsBytes {
+) : Comparable<ByteArray>,
+    AsBytes {
     public constructor() : this(null)
 
     public fun len(): Int {
@@ -173,8 +178,11 @@ public class ByteArray(
 
     public companion object {
         public fun new(): ByteArray = ByteArray()
+
         public fun from(bytes: Bytes): ByteArray = ByteArray(bytes)
+
         public fun from(buf: kotlin.ByteArray): ByteArray = ByteArray(Bytes.from(buf))
+
         public fun from(s: String): ByteArray = ByteArray(Bytes.from(s))
     }
 }
@@ -184,15 +192,21 @@ public class ByteArray(
  */
 public class FixedLenByteArray(
     public val byteArray: ByteArray = ByteArray(),
-) : Comparable<FixedLenByteArray>, AsBytes {
+) : Comparable<FixedLenByteArray>,
+    AsBytes {
     public constructor(buf: kotlin.ByteArray) : this(ByteArray.from(buf))
     public constructor(data: Bytes) : this(ByteArray.from(data))
 
     public fun len(): Int = byteArray.len()
+
     public fun isEmpty(): Boolean = byteArray.isEmpty()
+
     public fun data(): kotlin.ByteArray = byteArray.data()
+
     public fun bytes(): Bytes? = byteArray.bytes()
+
     public fun setData(data: Bytes): Unit = byteArray.setData(data)
+
     public fun slice(start: Int, len: Int): ByteArray = byteArray.slice(start, len)
 
     override fun asBytes(): kotlin.ByteArray = byteArray.asBytes()
@@ -216,6 +230,7 @@ public class FixedLenByteArray(
 
     public companion object {
         public fun from(other: ByteArray): FixedLenByteArray = FixedLenByteArray(other)
+
         public fun from(buf: kotlin.ByteArray): FixedLenByteArray = FixedLenByteArray(ByteArray.from(buf))
     }
 }
@@ -228,6 +243,7 @@ public class FixedLenByteArray(
 public sealed class Decimal : AsBytes {
     public abstract val precision: Int
     public abstract val scale: Int
+
     public abstract fun data(): kotlin.ByteArray
 
     public data class Int32(
@@ -354,9 +370,7 @@ public interface ParquetValueType : AsBytes {
 
     public fun asU64(): ULong = asI64().toULong()
 
-    public fun setFromBytes(data: Bytes) {
-        throw nyiErr("setFromBytes is only supported for ByteArray types")
-    }
+    public fun setFromBytes(data: Bytes): Unit = throw nyiErr("setFromBytes is only supported for ByteArray types")
 
     public companion object {
         public fun variableLengthBytes(values: List<ByteArray>): Long? =
