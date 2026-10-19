@@ -16,6 +16,7 @@ half = "3.0.0"
 base64 = "0.1.2"
 kmIo = "0.2.0"
 serdeJson = "0.1.1"
+serdeCore = "0.1.12"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -39,6 +40,7 @@ half-kotlin = { module = "io.github.kotlinmania:half-kotlin", version.ref = "hal
 base64-kotlin = { module = "io.github.kotlinmania:base64-kotlin", version.ref = "base64" }
 km-io = { module = "io.github.kotlinmania:km-io", version.ref = "kmIo" }
 serde-json-kotlin = { module = "io.github.kotlinmania:serde-json-kotlin", version.ref = "serdeJson" }
+serde-core = { module = "io.github.kotlinmania:serde-core", version.ref = "serdeCore" }
 
 [bundles]
 parquet-commonMain = [
@@ -52,4 +54,5 @@ parquet-commonMain = [
   "base64-kotlin",
   "km-io",
   "serde-json-kotlin",
+  "serde-core",
 ]
