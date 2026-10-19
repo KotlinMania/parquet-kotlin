@@ -495,6 +495,8 @@ public enum class CompressionCodec(public val value: Int) {
             7 -> LZ4_RAW
             else -> throw generalErr("Invalid CompressionCodec value: $value")
         }
+
+        public fun fromCompression(compression: Compression): CompressionCodec = compression.toCodec()
     }
 }
 
