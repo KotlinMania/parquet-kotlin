@@ -7,18 +7,18 @@ let package = Package(
         .macOS(.v15),
     ],
     dependencies: [
-        .package(name: "Template", path: "../build/SPMPackage/macosArm64/Debug")
+        .package(name: "Parquet", path: "../build/SPMPackage/macosArm64/Debug")
     ],
     targets: [
         .testTarget(
             name: "SwiftTestHarnessTests",
             dependencies: [
-                .product(name: "TemplateLibrary", package: "Template")
+                .product(name: "ParquetLibrary", package: "Parquet")
             ],
             linkerSettings: [
                 .unsafeFlags([
                     "-L", "../build/swift-test",
-                    "-lTemplate",
+                    "-lParquet",
                 ]),
             ]
         ),

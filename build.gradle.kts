@@ -333,9 +333,21 @@ writeAndroidLocalProperties()
 
 fun requestedTaskWantsAndroid(rawTaskName: String): Boolean {
     val taskName = rawTaskName.substringAfterLast(':')
-    if (taskName.contains("AndroidNative")) return false // Kotlin/Native, no SDK
-    if (taskName.contains("Android")) return true // direct AGP tasks
-    return taskName in setOf("build", "assemble", "check") // aggregates pull android
+    if (taskName.contains("AndroidNative", ignoreCase = true)) return false // Kotlin/Native, no SDK
+    if (taskName.contains("Android", ignoreCase = true)) return true // direct AGP tasks
+    return taskName in
+        setOf(
+            "build",
+            "assemble",
+            "check",
+            "test",
+            "hostTests",
+            "classes",
+            "testClasses",
+            "allTests",
+            "assembleUnitTest",
+            "assembleAndroidTest",
+        )
 }
 
 if (gradle.startParameter.taskNames.any(::requestedTaskWantsAndroid)) {
