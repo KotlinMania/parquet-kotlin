@@ -6,10 +6,8 @@ import io.github.kotlinmania.parquet.ConvertedType
 import io.github.kotlinmania.parquet.ElementType
 import io.github.kotlinmania.parquet.FieldRepetitionType
 import io.github.kotlinmania.parquet.LogicalType
-import io.github.kotlinmania.parquet.ParquetError
 import io.github.kotlinmania.parquet.ParquetType
 import io.github.kotlinmania.parquet.SortOrder
-import io.github.kotlinmania.parquet.ThriftCompactInputProtocol
 import io.github.kotlinmania.parquet.ThriftCompactOutputProtocol
 import io.github.kotlinmania.parquet.ThriftSliceInputProtocol
 import io.github.kotlinmania.parquet.TimeUnit
@@ -612,8 +610,9 @@ public class GroupTypeBuilder(
         }
 
         var currentConverted = convertedType
-        if (logicalType != null && convertedType == ConvertedType.NONE) {
-            currentConverted = ConvertedType.from(logicalType!!)
+        val logical = logicalType
+        if (logical != null && convertedType == ConvertedType.NONE) {
+            currentConverted = ConvertedType.from(logical)
         }
 
         val basicInfo =
@@ -758,6 +757,16 @@ public class ColumnDescriptor(
     public fun typePrecision(): Int = primitiveType.getPrecision()
 
     public fun typeScale(): Int = primitiveType.getScale()
+
+    public fun physical_type(): ParquetType = physicalType()
+
+    public fun converted_type(): ConvertedType = convertedType()
+
+    public fun logical_type_ref(): LogicalType? = logicalTypeRef()
+
+    public fun type_precision(): Int = typePrecision()
+
+    public fun type_scale(): Int = typeScale()
 
     public fun sortOrder(): SortOrder = primitiveType.getBasicInfo().sortOrder()
 
@@ -1090,7 +1099,7 @@ private fun schemaFromArrayHelper(
         }
         val fields = ArrayList<SchemaType>(numChildren)
         var nextIndex = index + 1
-        for (i in 0 until numChildren) {
+        repeat(numChildren) {
             val (childIndex, childNode) = schemaFromArrayHelper(elements, numElements, nextIndex)
             nextIndex = childIndex
             fields.add(childNode)

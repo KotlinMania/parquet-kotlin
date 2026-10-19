@@ -184,6 +184,13 @@ public class ByteArray(
         public fun from(buf: kotlin.ByteArray): ByteArray = ByteArray(Bytes.from(buf))
 
         public fun from(s: String): ByteArray = ByteArray(Bytes.from(s))
+
+        public fun from(f: io.github.kotlinmania.half.F16): ByteArray {
+            val bits = f.toBits().toInt()
+            return from(byteArrayOf((bits and 0xFF).toByte(), ((bits shr 8) and 0xFF).toByte()))
+        }
+
+        public fun from(buf: List<Byte>): ByteArray = from(buf.toByteArray())
     }
 }
 
@@ -333,6 +340,15 @@ public sealed class Decimal : AsBytes {
 
         public fun fromBytes(value: ByteArray, precision: Int, scale: Int): Decimal =
             Bytes(value, precision, scale)
+
+        public fun from_i32(value: Int, precision: Int, scale: Int): Decimal =
+            fromI32(value, precision, scale)
+
+        public fun from_i64(value: Long, precision: Int, scale: Int): Decimal =
+            fromI64(value, precision, scale)
+
+        public fun from_bytes(value: ByteArray, precision: Int, scale: Int): Decimal =
+            fromBytes(value, precision, scale)
     }
 }
 

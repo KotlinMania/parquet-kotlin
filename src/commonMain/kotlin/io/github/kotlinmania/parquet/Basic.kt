@@ -1012,7 +1012,7 @@ public data class EncodingMask(
             val listIdent = prot.readListBegin()
             validateListType(ElementType.I32, listIdent)
             var m = 0
-            for (i in 0 until listIdent.size) {
+            repeat(listIdent.size) {
                 val enc = Encoding.readThrift(prot)
                 m = m or (1 shl enc.value)
             }

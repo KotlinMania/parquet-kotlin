@@ -409,7 +409,7 @@ public interface ThriftCompactInputProtocol {
             FieldType.LIST, FieldType.SET -> {
                 val listIdent = readListBegin()
                 val elemType = FieldType.fromElementType(listIdent.elementType)
-                for (i in 0 until listIdent.size) {
+                repeat(listIdent.size) {
                     skipTillDepth(elemType, (depth - 1).toByte())
                 }
             }
@@ -430,7 +430,7 @@ public interface ThriftCompactInputProtocol {
                             ?: throw ThriftProtocolError.InvalidElementType(valByte.toUByte())
                     val keyType = FieldType.fromElementType(keyElem)
                     val valType = FieldType.fromElementType(valElem)
-                    for (i in 0 until size) {
+                    repeat(size) {
                         skipTillDepth(keyType, (depth - 1).toByte())
                         skipTillDepth(valType, (depth - 1).toByte())
                     }
@@ -597,7 +597,7 @@ public fun <T> readThriftVec(
     val size = listIdent.size
     checkListSize(prot.remainingBytes(), size)
     val res = ArrayList<T>(size)
-    for (i in 0 until size) {
+    repeat(size) {
         res.add(reader.readThrift(prot))
     }
     return res
@@ -609,7 +609,7 @@ public fun readThriftVecInt(prot: ThriftCompactInputProtocol): List<Int> {
     val size = listIdent.size
     checkListSize(prot.remainingBytes(), size)
     val res = ArrayList<Int>(size)
-    for (i in 0 until size) {
+    repeat(size) {
         res.add(prot.readI32())
     }
     return res
