@@ -1,7 +1,6 @@
 [versions]
 kotlin = "2.4.20"
 coroutines = "1.11.0"
-serialization = "1.11.0"
 datetime = "0.8.0"
 collectionsImmutable = "0.5.2"
 androidKmp = "9.4.1"
@@ -9,6 +8,15 @@ detekt = "2.0.0-alpha.6"
 ktlint = "14.2.0"
 ktlintEngine = "1.8.0"
 kotlinxBenchmark = "0.5.0"
+bytes = "0.2.2"
+chrono = "0.2.0"
+numBigint = "0.1.2"
+numTraits = "0.2.15"
+half = "3.0.0"
+base64 = "0.1.2"
+kmIo = "0.2.0"
+serdeJson = "0.1.1"
+serdeCore = "0.1.12"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -21,17 +29,30 @@ kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "ko
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "serialization" }
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collectionsImmutable" }
 kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
+bytes-kotlin = { module = "io.github.kotlinmania:bytes-kotlin", version.ref = "bytes" }
+chrono-kotlin = { module = "io.github.kotlinmania:chrono-kotlin", version.ref = "chrono" }
+num-bigint-kotlin = { module = "io.github.kotlinmania:num-bigint-kotlin", version.ref = "numBigint" }
+num-traits-kotlin = { module = "io.github.kotlinmania:num-traits-kotlin", version.ref = "numTraits" }
+half-kotlin = { module = "io.github.kotlinmania:half-kotlin", version.ref = "half" }
+base64-kotlin = { module = "io.github.kotlinmania:base64-kotlin", version.ref = "base64" }
+km-io = { module = "io.github.kotlinmania:km-io", version.ref = "kmIo" }
+serde-json-kotlin = { module = "io.github.kotlinmania:serde-json-kotlin", version.ref = "serdeJson" }
+serde-core = { module = "io.github.kotlinmania:serde-core", version.ref = "serdeCore" }
 
 [bundles]
 parquet-commonMain = [
   "kotlinx-coroutines-core",
-  "kotlinx-serialization-core",
-  "kotlinx-serialization-json",
-  "kotlinx-datetime",
   "collections-immutable",
+  "bytes-kotlin",
+  "chrono-kotlin",
+  "num-bigint-kotlin",
+  "num-traits-kotlin",
+  "half-kotlin",
+  "base64-kotlin",
+  "km-io",
+  "serde-json-kotlin",
+  "serde-core",
 ]

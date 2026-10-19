@@ -1,21 +1,21 @@
 #if canImport(Testing)
 import Testing
-import Template
+import Parquet
 
-@Suite("Template Swift Export Tests")
-struct TemplateExportTests {
-    @Test("Template swift module imported cleanly")
+@Suite("Parquet Swift Export Tests")
+struct ParquetExportTests {
+    @Test("Parquet swift module imported cleanly")
     func testSwiftModuleLoads() throws {
-        #expect(Bool(true), "Template swift module imported cleanly")
+        #expect(Bool(true), "Parquet swift module imported cleanly")
     }
 }
 #elseif canImport(XCTest)
 import XCTest
-import Template
+import Parquet
 
-final class TemplateExportTests: XCTestCase {
+final class ParquetExportTests: XCTestCase {
     func testSwiftModuleLoads() throws {
-        XCTAssertTrue(true, "Template swift module imported cleanly")
+        XCTAssertTrue(true, "Parquet swift module imported cleanly")
     }
 }
 #endif
